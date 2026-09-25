@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>نقشه راه علوم - علوم هفتم</title>
+<link rel="manifest" href="manifest.json">
+<link rel="stylesheet" href="css/style.css">
+<style>
+  .header { display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px; }
+  .header h1 { font-size: 18px; margin:0; }
+  .points-badge { background: var(--accent-2); color:#241600; font-weight:700; font-size:13px; padding:5px 12px; border-radius:20px; }
+  #roadmap-wrap { position: relative; width: 100%; max-width: 420px; margin: 0 auto; }
+  #roadmap-svg { width: 100%; height: auto; display:block; }
+  .node { cursor: pointer; transition: transform .15s ease; }
+  .node:active { transform: scale(.92); }
+  .node-circle { stroke-width: 3; }
+  .node.completed .node-circle { fill: var(--accent); stroke: var(--accent); }
+  .node.unlocked .node-circle { fill: var(--accent-3); stroke: var(--accent-3); }
+  .node.locked .node-circle { fill: var(--locked); stroke: var(--locked); }
+  .node-label { font-size: 11px; fill: var(--text); font-family: 'Vazirmatn', Tahoma, sans-serif; font-weight: 700; text-anchor: middle; }
+  .node-icon { font-size: 16px; text-anchor: middle; dominant-baseline: middle; }
+  #chapter-sheet {
+    position: fixed; inset: auto 0 0 0; background: var(--card);
+    border-radius: 24px 24px 0 0; padding: 20px; transform: translateY(110%);
+    transition: transform .25s ease; box-shadow: 0 -8px 30px rgba(0,0,0,.4); z-index: 20;
+    max-width: 480px; margin: 0 auto; left:0; right:0;
+  }
+  #chapter-sheet.open { transform: translateY(0); }
+  #sheet-backdrop { position: fixed; inset:0; background: rgba(0,0,0,.5); opacity:0; pointer-events:none; transition:.25s; z-index: 19; }
+  #sheet-backdrop.open { opacity:1; pointer-events:auto; }
+</style>
+</head>
+<body>
+<div id="sheet-backdrop"></div>
+<div class="container">
+  <div class="header">
+    <div>
+      <h1>سلام 👋</h1>
+      <p style="color:var(--text-dim); font-size:12px; margin:2px 0 0;">مسیر علوم تجربی هشتم را طی کن</p>
+    </div>
+    <div class="points-badge" id="points-badge">۰ امتیاز</div>
+  </div>
+
+  <div id="roadmap-wrap" class="card">
+    <svg id="roadmap-svg" viewBox="0 0 400 900" xmlns="http://www.w3.org/2000/svg">
+      <path id="spiral-path" d="" fill="none" stroke="#2c3f5a" stroke-width="6" stroke-linecap="round"/>
+      <g id="nodes-layer"></g>
+    </svg>
+  </div>
+
+  <div class="creator-credit">
+    <img src="icons/creator.jpg" alt="لقمان ویسی">
+    <div>
+      <b>لقمان ویسی</b>
+      دبیر علوم تجربی استان کرمانشاه — مدرس کشوری تیمز
+    </div>
+  </div>
+</div>
+
+<!-- برگه‌ی جزئیات فصل -->
+<div id="chapter-sheet">
+  <h2 id="sheet-title" style="margin-top:0;">عنوان فصل</h2>
+  <p id="sheet-status" style="color:var(--text-dim); font-size:13px;"></p>
+  <button class="btn" id="sheet-action">مطالعه فصل</button>
+  <button class="btn secondary" id="sheet-close" style="margin-top:10px;">بستن</button>
+</div>
+
+<div class="bottom-nav">
+  <a class="nav-item" href="profile.html"><span class="icon">👤</span>پروفایل</a>
+  <a class="nav-item active" href="home.html"><span class="icon">🏠</span>خانه</a>
+  <a class="nav-item competition" href="competition.html"><span class="icon">⚔️</span>رقابت</a>
+</div>
+
+<script src="js/api.js"></script>
+<script>
+const CHAPTER_COUNT = 16;
+const svg = document.getElementById('roadmap-svg');
+const pathEl = document.getElementById('spiral-path');
+const nodesLayer = document.getElementById('nodes-layer');
+
+function buildSpiralPath() {
+  const cx = 200, cyBase = 850, turns = 3.4, points = [];
+  const steps = 200;
+  for (let i = 0; i <= steps; i++) {
+    const t = i / steps;
+    const angle = t * turns * Math.PI * 2;
+    const radius = 40 + t * 130;
+    const y = cyBase - t * 780;
+    const x = cx + Math.sin(angle) * radius;
+    points.push([x, y]);
+  }
+  let d = `M ${points[0][0]} ${points[0][1]}`;
+  points.slice(1).forEach(p => d += ` L ${p[0]} ${p[1]}`);
+  pathEl.setAttribute('d', d);
+  return pathEl;
+}
+
+function placeNodesOnPath(chapters) {
+  const path = buildSpiralPath();
+  const totalLength = path.getTotalLength();
+  nodesLayer.innerHTML = '';
+
+  chapters.forEach((ch, idx) => {
+    const frac = idx / (chapters.length - 1);
+    const pt = path.getPointAtLength(totalLength * frac);
+
+    const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    g.setAttribute('class', `node ${ch.status}`);
+    g.setAttribute('transform', `translate(${pt.x}, ${pt.y})`);
+    g.dataset.id = ch.id;
+
+    const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    circle.setAttribute('r', 22);
+    circle.setAttribute('class', 'node-circle');
+    g.appendChild(circle);
+
+    const icon = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    icon.setAttribute('class', 'node-icon');
+    icon.setAttribute('fill', '#fff');
+    icon.textContent = ch.status === 'completed' ? '✓' : ch.status === 'locked' ? '🔒' : (ch.number ?? idx);
+    g.appendChild(icon);
+
+    const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    label.setAttribute('class', 'node-label');
+    label.setAttribute('y', 38);
+    label.textContent = ch.number === 0 ? 'مقدمه' : `فصل ${ch.number}`;
+    g.appendChild(label);
+
+    g.addEventListener('click', () => openSheet(ch));
+    nodesLayer.appendChild(g);
+  });
+}
+
+const sheet = document.getElementById('chapter-sheet');
+const backdrop = document.getElementById('sheet-backdrop');
+function openSheet(ch) {
+  document.getElementById('sheet-title').textContent = ch.number === 0 ? 'مقدمه' : `فصل ${ch.number}: ${ch.title || ''}`;
+  const statusText = { locked: '🔒 این فصل هنوز قفل است', unlocked: 'آماده مطالعه', completed: `✓ گذرانده شده — نمره: ${ch.best_score ?? '-'} از ۱۰` };
+  document.getElementById('sheet-status').textContent = statusText[ch.status] || '';
+  const actionBtn = document.getElementById('sheet-action');
+  actionBtn.style.display = ch.status === 'locked' ? 'none' : 'inline-flex';
+  actionBtn.onclick = () => location.href = `chapter.html?id=${ch.id}`;
+  sheet.classList.add('open'); backdrop.classList.add('open');
+}
+document.getElementById('sheet-close').onclick = () =>
+  (sheet.classList.remove('open'), backdrop.classList.remove('open'));
+backdrop.onclick = document.getElementById('sheet-close').onclick;
+
+async function loadChapters() {
+  try {
+    const data = await api.get('/chapters');
+    placeNodesOnPath(data);
+  } catch (e) {
+    const mock = Array.from({ length: CHAPTER_COUNT }, (_, i) => ({
+      id: i, number: i, title: `عنوان فصل ${i}`,
+      status: i === 0 ? 'completed' : i === 1 ? 'unlocked' : 'locked',
+      best_score: i === 0 ? 9 : null,
+    }));
+    placeNodesOnPath(mock);
+  }
+}
+loadChapters();
+api.get('/profile').then(d => {
+  document.getElementById('points-badge').textContent = `${d.user.total_points} امتیاز`;
+}).catch(() => {});
+</script>
+</body>
+</html>
