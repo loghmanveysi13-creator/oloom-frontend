@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>رقابت - علوم هفتم</title>
+<link rel="manifest" href="manifest.json">
+<link rel="stylesheet" href="css/style.css">
+<style>
+  .vs-row { display:flex; justify-content:space-between; align-items:center; margin: 20px 0; }
+  .score-box { text-align:center; }
+  .score-box .num { font-size: 32px; font-weight:900; color: var(--accent); }
+  .vs-label { font-size:13px; color:var(--text-dim); }
+  .option-btn { width:100%; text-align:right; padding:14px; margin-bottom:10px; border-radius:12px; border:1.5px solid #2c3f5a; background:#0f1c2d; color:var(--text); font-family:inherit; font-size:15px; cursor:pointer; }
+  .option-btn:active { background: var(--accent-3); }
+  #result-banner { text-align:center; font-size:22px; font-weight:900; margin: 20px 0; }
+  #result-banner.win { color: var(--accent); }
+  #result-banner.lose { color: var(--danger); }
+</style>
+</head>
+<body>
+<div class="container">
+  <div id="idle-state" class="card">
+    <h2 style="margin-top:0;">رقابت زنده ⚔️</h2>
+    <p style="color:var(--text-dim); font-size:14px;">با یک هم‌کلاسی تصادفی مسابقه بده! هرکدام دو نوبت چهار سوالی دارید، در نهایت برنده ۵۰ امتیاز می‌گیرد.</p>
+    <button class="btn" id="findMatchBtn">پیدا کردن حریف</button>
+  </div>
+
+  <div id="waiting-state" class="card" style="display:none; text-align:center;">
+    <p>در حال جستجوی حریف...</p>
+  </div>
+
+  <div id="battle-state" class="card" style="display:none;">
+    <div class="vs-row">
+      <div class="score-box"><div class="num" id="myScore">0</div><div class="vs-label">امتیاز تو</div></div>
+      <div class="vs-label">در برابر</div>
+      <div class="score-box"><div class="num" id="oppScore">0</div><div class="vs-label">حریف</div></div>
+    </div>
+    <p id="turnStatus" style="text-align:center; color:var(--accent-2); font-weight:700;"></p>
+    <div id="questionArea"></div>
+  </div>
+
+  <div id="finished-state" class="card" style="display:none; text-align:center;">
+    <div id="result-banner"></div>
+    <button class="btn" onclick="location.reload()">رقابت جدید</button>
+  </div>
+</div>
+
+<div class="bottom-nav">
+  <a class="nav-item" href="profile.html"><span class="icon">👤</span>پروفایل</a>
+  <a class="nav-item" href="home.html"><span class="icon">🏠</span>خانه</a>
+  <a class="nav-item competition active" href="competition.html"><span class="icon">⚔️</span>رقابت</a>
+</div>
+
+<script src="js/api.js"></script>
+<script>
+let compId = null, myId = JSON.parse(localStorage.getItem('user') || '{}').id;
+let pollTimer = null;
+
+document.getElementById('findMatchBtn').onclick = async () => {
+  show('waiting');
+  const res = await api.post('/competition/request', {});
+  if (res.matched) { compId = res.competitionId; startBattlePolling(); }
+  else pollWaiting();
+};
+
+async function pollWaiting() {
+  pollTimer = setInterval(async () => {
+    const res = await api.get('/competition/status');
+    if (res.active) { compId = res.active.id; clearInterval(pollTimer); startBattlePolling(); }
+  }, 2500);
+}
+
+async function startBattlePolling() {
+  show('battle');
+  await refreshBattle();
+}
+
+async function refreshBattle() {
+  const res = await api.get('/competition/status');
+  const comp = res.active;
+  if (!comp) return;
+  const isP1 = comp.player1_id === myId;
+  document.getElementById('myScore').textContent = isP1 ? comp.player1_score : comp.player2_score;
+  document.getElementById('oppScore').textContent = isP1 ? comp.player2_score : comp.player1_score;
+
+  if (comp.status === 'finished') {
+    show('finished');
+    const won = comp.winner_id === myId;
+    const banner = document.getElementById('result-banner');
+    banner.className = won ? 'win' : 'lose';
+    banner.textContent = comp.winner_id === null ? 'مساوی شد!' : won ? '🎉 تبریک، تو برنده شدی! (+۵۰ امتیاز)' : '😔 متاسفم که باختی';
+    return;
+  }
+
+  if (comp.current_turn_player === myId) {
+    document.getElementById('turnStatus').textContent = 'نوبت توست — ۴ سوال جواب بده';
+    loadTurnQuestions();
+  } else {
+    document.getElementById('turnStatus').textContent = 'منتظر بمان تا حریف نوبتش تمام شود...';
+    document.getElementById('questionArea').innerHTML = '';
+    setTimeout(refreshBattle, 3000);
+  }
+}
+
+async function loadTurnQuestions() {
+  const questions = await api.get(`/competition/${compId}/questions`);
+  const answers = [];
+  const area = document.getElementById('questionArea');
+  let idx = 0;
+
+  function renderQ() {
+    if (idx >= questions.length) return submitTurn();
+    const q = questions[idx];
+    area.innerHTML = `<p style="font-weight:700;">${q.question_text}</p>` +
+      ['a','b','c','d'].map(opt => `<button class="option-btn" data-opt="${opt}">${q['option_' + opt]}</button>`).join('');
+    area.querySelectorAll('.option-btn').forEach(btn => btn.onclick = () => {
+      answers.push({ questionId: q.id, selected: btn.dataset.opt });
+      idx++; renderQ();
+    });
+  }
+  renderQ();
+
+  async function submitTurn() {
+    area.innerHTML = '<p style="text-align:center; color:var(--text-dim);">در حال ثبت نتیجه...</p>';
+    await api.post(`/competition/${compId}/answer-turn`, { answers });
+    refreshBattle();
+  }
+}
+
+function show(state) {
+  ['idle', 'waiting', 'battle', 'finished'].forEach(s =>
+    document.getElementById(s + '-state').style.display = s === state ? 'block' : 'none');
+}
+</script>
+</body>
+</html>
