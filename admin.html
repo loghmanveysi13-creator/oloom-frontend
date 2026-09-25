@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>پنل مدیریت - علوم هفتم</title>
+<link rel="stylesheet" href="css/style.css">
+<style>
+  table { width:100%; border-collapse: collapse; font-size:13px; }
+  th, td { padding:10px 6px; text-align:right; border-bottom:1px solid #24344c; }
+  th { color:var(--text-dim); font-weight:700; }
+  tr { cursor:pointer; }
+  tr:active { background: rgba(255,255,255,.03); }
+</style>
+</head>
+<body>
+<div class="container" style="max-width:700px;">
+  <h1>پنل مدیریت — لقمان ویسی</h1>
+  <div class="card">
+    <table>
+      <thead><tr><th>نام</th><th>موبایل</th><th>امتیاز</th><th>فصل‌های گذرانده</th></tr></thead>
+      <tbody id="usersTable"></tbody>
+    </table>
+  </div>
+  <div class="card" id="detailCard" style="display:none; margin-top:16px;">
+    <h3 id="detailName"></h3>
+    <div id="detailBody"></div>
+  </div>
+</div>
+
+<script src="js/api.js"></script>
+<script>
+async function load() {
+  const users = await api.get('/admin/users');
+  document.getElementById('usersTable').innerHTML = users.map(u => `
+    <tr onclick="showDetail(${u.id}, '${u.full_name || u.username}')">
+      <td>${u.full_name || u.username}</td><td>${u.mobile}</td>
+      <td>${u.total_points}</td><td>${u.chapters_completed}</td>
+    </tr>`).join('');
+}
+load();
+
+async function showDetail(id, name) {
+  const data = await api.get(`/admin/users/${id}/activity`);
+  document.getElementById('detailCard').style.display = 'block';
+  document.getElementById('detailName').textContent = name;
+  document.getElementById('detailBody').innerHTML =
+    '<h4>پیشرفت فصل‌ها</h4>' +
+    data.progress.map(p => `<div>${p.number === 0 ? 'مقدمه' : 'فصل ' + p.number} — ${p.status} — بهترین نمره: ${p.best_score ?? '-'}</div>`).join('') +
+    '<h4 style="margin-top:14px;">تاریخچه آزمون‌ها</h4>' +
+    data.quizHistory.map(q => `<div>فصل ${q.chapter_id}: ${q.score}/10 (${q.passed ? 'قبول' : 'مردود'}) — ${q.created_at}</div>`).join('');
+}
+</script>
+</body>
+</html>
