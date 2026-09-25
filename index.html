@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ورود - علوم هفتم</title>
+<link rel="manifest" href="manifest.json">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="container" style="padding-top:60px;">
+  <div class="brand">
+    <img src="icons/creator.jpg" style="width:64px;height:64px;border-radius:50%;object-fit:cover;border:3px solid var(--accent);" alt="">
+    <h1>علوم هفتم</h1>
+    <p>اپ آموزشی علوم تجربی — لقمان ویسی</p>
+  </div>
+  <div class="card">
+    <input class="input" id="mobile" type="tel" placeholder="شماره موبایل" inputmode="numeric">
+    <input class="input" id="password" type="password" placeholder="رمز عبور">
+    <button class="btn" id="loginBtn">ورود</button>
+    <p id="error" style="color: var(--danger); font-size: 13px; text-align:center; min-height:18px;"></p>
+    <p style="text-align:center; font-size:13px; color:var(--text-dim);">
+      حساب نداری؟ <a href="register.html" style="color:var(--accent);">ثبت‌نام کن</a>
+    </p>
+  </div>
+</div>
+<script src="js/api.js"></script>
+<script>
+document.getElementById('loginBtn').onclick = async () => {
+  const mobile = document.getElementById('mobile').value.trim();
+  const password = document.getElementById('password').value;
+  const errorEl = document.getElementById('error');
+  errorEl.textContent = '';
+  try {
+    const data = await api.post('/auth/login', { mobile, password });
+    localStorage.setItem('token', data.token);
+    localStorage.setItem('user', JSON.stringify(data.user));
+    location.href = 'home.html';
+  } catch (e) {
+    errorEl.textContent = e.message;
+  }
+};
+</script>
+</body>
+</html>
