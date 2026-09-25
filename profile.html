@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>پروفایل - علوم هفتم</title>
+<link rel="manifest" href="manifest.json">
+<link rel="stylesheet" href="css/style.css">
+<style>
+  .avatar-wrap { text-align:center; margin-bottom: 16px; }
+  .avatar-wrap img { width:96px; height:96px; border-radius:50%; object-fit:cover; border:3px solid var(--accent); }
+  .stat-row { display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid #24344c; font-size:14px; }
+  .stat-row:last-child { border-bottom:none; }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="card">
+    <div class="avatar-wrap">
+      <img id="avatar" src="icons/default-avatar.png" alt="">
+      <div style="margin-top:8px;">
+        <label class="btn secondary" style="display:inline-block; width:auto; padding:8px 16px; cursor:pointer;">
+          تغییر عکس پروفایل
+          <input type="file" id="avatarInput" accept="image/*" style="display:none;">
+        </label>
+      </div>
+    </div>
+    <h2 id="username" style="text-align:center; margin:4px 0;"></h2>
+    <div class="stat-row"><span>امتیاز کل</span><b id="points"></b></div>
+    <div class="stat-row"><span>فصل‌های گذرانده</span><b id="completedCount"></b></div>
+  </div>
+
+  <div class="card" style="margin-top:16px;">
+    <h3 style="margin-top:0;">آخرین آزمون‌ها</h3>
+    <div id="attemptsList"></div>
+  </div>
+</div>
+
+<div class="bottom-nav">
+  <a class="nav-item active" href="profile.html"><span class="icon">👤</span>پروفایل</a>
+  <a class="nav-item" href="home.html"><span class="icon">🏠</span>خانه</a>
+  <a class="nav-item competition" href="competition.html"><span class="icon">⚔️</span>رقابت</a>
+</div>
+
+<script src="js/api.js"></script>
+<script>
+async function load() {
+  try {
+    const { user, attempts } = await api.get('/profile');
+    document.getElementById('username').textContent = user.full_name || user.username;
+    document.getElementById('points').textContent = user.total_points;
+    document.getElementById('completedCount').textContent = attempts.filter(a => a.passed).length;
+    if (user.avatar_path) document.getElementById('avatar').src = API_BASE.replace('/api','') + user.avatar_path;
+    document.getElementById('attemptsList').innerHTML = attempts.map(a =>
+      `<div class="stat-row"><span>فصل ${a.chapter_id}</span><b style="color:${a.passed ? 'var(--accent)' : 'var(--danger)'}">${a.score}/10</b></div>`
+    ).join('') || '<p style="color:var(--text-dim); font-size:13px;">هنوز آزمونی نداده‌ای</p>';
+  } catch (e) { /* هدایت به ورود اگر توکن نامعتبر بود */ }
+}
+load();
+
+document.getElementById('avatarInput').onchange = async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const fd = new FormData();
+  fd.append('avatar', file);
+  const token = localStorage.getItem('token');
+  const res = await fetch(API_BASE + '/profile/avatar', {
+    method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: fd,
+  });
+  const data = await res.json();
+  if (data.avatar_path) document.getElementById('avatar').src = API_BASE.replace('/api','') + data.avatar_path;
+};
+</script>
+</body>
+</html>
