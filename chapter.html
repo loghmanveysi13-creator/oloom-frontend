@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>مطالعه فصل - علوم هفتم</title>
+<link rel="manifest" href="manifest.json">
+<link rel="stylesheet" href="css/style.css">
+<style>
+  .option-btn { width:100%; text-align:right; padding:14px; margin-bottom:10px; border-radius:12px; border:1.5px solid #2c3f5a; background:#0f1c2d; color:var(--text); font-family:inherit; font-size:15px; cursor:pointer; }
+  .option-btn.selected { border-color: var(--accent); background: rgba(62,207,142,.15); }
+  #result { text-align:center; font-size:18px; font-weight:700; margin-top:16px; }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="card" id="content-card">
+    <h2 id="chapterTitle"></h2>
+    <div id="chapterContent" style="line-height:1.9; font-size:15px;"></div>
+    <button class="btn" id="startQuizBtn" style="margin-top:16px;">شروع آزمون پایان فصل (۱۰ سوال)</button>
+  </div>
+
+  <div class="card" id="quiz-card" style="display:none;">
+    <p id="quizProgress" style="color:var(--text-dim); font-size:13px;"></p>
+    <div id="quizArea"></div>
+    <div id="result"></div>
+  </div>
+</div>
+
+<script src="js/api.js"></script>
+<script>
+const chapterId = new URLSearchParams(location.search).get('id');
+
+async function loadChapter() {
+  const ch = await api.get(`/chapters/${chapterId}`);
+  document.getElementById('chapterTitle').textContent = ch.number === 0 ? 'مقدمه' : `فصل ${ch.number}: ${ch.title}`;
+  document.getElementById('chapterContent').innerHTML = ch.content || '<p>محتوای این فصل به‌زودی اضافه می‌شود.</p>';
+}
+loadChapter();
+
+document.getElementById('startQuizBtn').onclick = async () => {
+  document.getElementById('content-card').style.display = 'none';
+  document.getElementById('quiz-card').style.display = 'block';
+  const questions = await api.get(`/quiz/${chapterId}/start`);
+  const answers = [];
+  let idx = 0;
+  const area = document.getElementById('quizArea');
+  const progress = document.getElementById('quizProgress');
+
+  function renderQ() {
+    if (idx >= questions.length) return submit();
+    progress.textContent = `سوال ${idx + 1} از ${questions.length}`;
+    const q = questions[idx];
+    area.innerHTML = `<p style="font-weight:700;">${q.question_text}</p>` +
+      ['a','b','c','d'].map(opt => `<button class="option-btn" data-opt="${opt}">${q['option_' + opt]}</button>`).join('');
+    area.querySelectorAll('.option-btn').forEach(btn => btn.onclick = () => {
+      answers.push({ questionId: q.id, selected: btn.dataset.opt });
+      idx++; renderQ();
+    });
+  }
+  renderQ();
+
+  async function submit() {
+    area.innerHTML = ''; progress.textContent = '';
+    const res = await api.post(`/quiz/${chapterId}/submit`, { answers });
+    const result = document.getElementById('result');
+    result.style.color = res.passed ? 'var(--accent)' : 'var(--danger)';
+    result.textContent = res.message;
+    const backBtn = document.createElement('button');
+    backBtn.className = 'btn'; backBtn.style.marginTop = '16px';
+    backBtn.textContent = 'بازگشت به نقشه راه';
+    backBtn.onclick = () => location.href = 'home.html';
+    result.after(backBtn);
+  }
+};
+</script>
+</body>
+</html>
