@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ثبت‌نام - علوم هفتم</title>
+<link rel="manifest" href="manifest.json">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="container" style="padding-top:60px;">
+  <div class="brand">
+    <h1>ثبت‌نام دانش‌آموز</h1>
+    <p>برای شروع مسیر علوم هفتم حساب بساز</p>
+  </div>
+  <div class="card">
+    <input class="input" id="full_name" placeholder="نام و نام خانوادگی">
+    <input class="input" id="username" placeholder="نام کاربری (یکتا)">
+    <input class="input" id="mobile" type="tel" placeholder="شماره موبایل" inputmode="numeric">
+    <input class="input" id="password" type="password" placeholder="رمز عبور">
+    <button class="btn" id="registerBtn">ثبت‌نام</button>
+    <p id="error" style="color: var(--danger); font-size: 13px; text-align:center; min-height:18px;"></p>
+    <p style="text-align:center; font-size:13px; color:var(--text-dim);">
+      حساب داری؟ <a href="index.html" style="color:var(--accent);">وارد شو</a>
+    </p>
+  </div>
+</div>
+<script src="js/api.js"></script>
+<script>
+document.getElementById('registerBtn').onclick = async () => {
+  const body = {
+    full_name: document.getElementById('full_name').value.trim(),
+    username: document.getElementById('username').value.trim(),
+    mobile: document.getElementById('mobile').value.trim(),
+    password: document.getElementById('password').value,
+  };
+  const errorEl = document.getElementById('error');
+  errorEl.textContent = '';
+  try {
+    const data = await api.post('/auth/register', body);
+    localStorage.setItem('token', data.token);
+    localStorage.setItem('user', JSON.stringify(data.user));
+    location.href = 'home.html';
+  } catch (e) {
+    errorEl.textContent = e.message;
+  }
+};
+</script>
+</body>
+</html>
