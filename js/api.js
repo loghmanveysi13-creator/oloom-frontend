@@ -1,5 +1,5 @@
-// آدرس بک‌اند را بعد از دیپلوی روی هاست ایرانی اینجا قرار بده
-const API_BASE = window.API_BASE || 'https://api.your-domain.ir/api';
+// آدرس بک‌اند روی Render
+const API_BASE = window.API_BASE || 'https://oloom-backend.onrender.com/api';
 
 const api = {
   async request(path, options = {}) {
