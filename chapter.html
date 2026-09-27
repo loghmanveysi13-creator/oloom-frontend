@@ -7,9 +7,12 @@
 <link rel="manifest" href="manifest.json">
 <link rel="stylesheet" href="css/style.css">
 <style>
-  .option-btn { width:100%; text-align:right; padding:14px; margin-bottom:10px; border-radius:12px; border:1.5px solid #2c3f5a; background:#0f1c2d; color:var(--text); font-family:inherit; font-size:15px; cursor:pointer; }
-  .option-btn.selected { border-color: var(--accent); background: rgba(62,207,142,.15); }
+  .option-btn { width:100%; text-align:right; padding:14px; margin-bottom:10px; border-radius:12px; border:1.5px solid #2c3f5a; background:#0f1c2d; color:var(--text); font-family:inherit; font-size:15px; cursor:pointer; transition: all .15s ease; }
+  .option-btn.correct { border-color: var(--accent); background: rgba(62,207,142,.25); }
+  .option-btn.wrong { border-color: var(--danger); background: rgba(255,107,107,.2); }
+  .option-btn:disabled { cursor: default; }
   #result { text-align:center; font-size:18px; font-weight:700; margin-top:16px; }
+  #feedback { text-align:center; font-size:14px; font-weight:700; margin-top:10px; min-height:20px; }
 </style>
 </head>
 <body>
@@ -24,6 +27,7 @@
   <div class="card" id="quiz-card" style="display:none;">
     <p id="quizProgress" style="color:var(--text-dim); font-size:13px;"></p>
     <div id="quizArea"></div>
+    <div id="feedback"></div>
     <div id="result"></div>
   </div>
 </div>
@@ -59,30 +63,49 @@ document.getElementById('startQuizBtn').onclick = async () => {
   let idx = 0;
   const area = document.getElementById('quizArea');
   const progress = document.getElementById('quizProgress');
+  const feedback = document.getElementById('feedback');
 
   function renderQ() {
+    feedback.textContent = '';
     if (idx >= questions.length) return submit();
     progress.textContent = `سوال ${idx + 1} از ${questions.length}`;
     const q = questions[idx];
     area.innerHTML = `<p style="font-weight:700;">${q.question_text}</p>` +
       ['a','b','c','d'].map(opt => `<button class="option-btn" data-opt="${opt}">${q['option_' + opt]}</button>`).join('');
-    area.querySelectorAll('.option-btn').forEach(btn => btn.onclick = () => {
-      answers.push({ questionId: q.id, selected: btn.dataset.opt });
-      idx++; renderQ();
+
+    area.querySelectorAll('.option-btn').forEach(btn => btn.onclick = async () => {
+      area.querySelectorAll('.option-btn').forEach(b => b.disabled = true);
+      const selected = btn.dataset.opt;
+      answers.push({ questionId: q.id, selected });
+
+      const check = await api.post('/quiz/check-answer', { questionId: q.id, selected });
+      if (check.correct) {
+        btn.classList.add('correct');
+        feedback.style.color = 'var(--accent)';
+        feedback.textContent = '✓ درست بود! (+۵ امتیاز)';
+      } else {
+        btn.classList.add('wrong');
+        const correctBtn = [...area.querySelectorAll('.option-btn')].find(b => b.dataset.opt === check.correctOption);
+        if (correctBtn) correctBtn.classList.add('correct');
+        feedback.style.color = 'var(--danger)';
+        feedback.textContent = '✗ اشتباه بود';
+      }
+
+      setTimeout(() => { idx++; renderQ(); }, 1300);
     });
   }
   renderQ();
 
   async function submit() {
-    area.innerHTML = ''; progress.textContent = '';
+    area.innerHTML = ''; progress.textContent = ''; feedback.textContent = '';
     const res = await api.post(`/quiz/${chapterId}/submit`, { answers });
     const result = document.getElementById('result');
     result.style.color = res.passed ? 'var(--accent)' : 'var(--danger)';
     result.textContent = res.message;
     const backBtn = document.createElement('button');
     backBtn.className = 'btn'; backBtn.style.marginTop = '16px';
-    backBtn.textContent = 'بازگشت به نقشه راه';
-    backBtn.onclick = () => location.href = 'home.html';
+    backBtn.textContent = res.passed ? 'بازگشت به نقشه راه' : 'مرور دوباره فصل';
+    backBtn.onclick = () => location.href = res.passed ? 'home.html' : `chapter.html?id=${chapterId}`;
     result.after(backBtn);
   }
 };
