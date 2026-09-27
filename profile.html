@@ -68,7 +68,10 @@ document.getElementById('avatarInput').onchange = async (e) => {
     method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: fd,
   });
   const data = await res.json();
-  if (data.avatar_path) document.getElementById('avatar').src = API_BASE.replace('/api','') + data.avatar_path;
+  if (data.avatar_path) {
+    document.getElementById('avatar').src = API_BASE.replace('/api','') + data.avatar_path + '?t=' + Date.now();
+    loadNavAvatar();
+  }
 };
 </script>
 </body>
