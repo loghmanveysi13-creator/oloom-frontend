@@ -8,9 +8,10 @@
 <link rel="stylesheet" href="css/style.css">
 <style>
   .avatar-wrap { text-align:center; margin-bottom: 16px; }
-  .avatar-wrap img { width:96px; height:96px; border-radius:50%; object-fit:cover; border:3px solid var(--accent); }
+  .avatar-wrap img { width:96px; height:96px; border-radius:50%; object-fit:cover; border:3px solid var(--accent); background:#0f1c2d; }
   .stat-row { display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid #24344c; font-size:14px; }
   .stat-row:last-child { border-bottom:none; }
+  #avatarMsg { text-align:center; font-size:13px; margin-top:10px; min-height:18px; }
 </style>
 </head>
 <body>
@@ -18,12 +19,13 @@
   <div class="card">
     <div class="avatar-wrap">
       <img id="avatar" src="icons/default-avatar.png" alt="">
-      <div style="margin-top:8px;">
-        <label class="btn secondary" style="display:inline-block; width:auto; padding:8px 16px; cursor:pointer;">
+      <div style="margin-top:10px;">
+        <button type="button" class="btn secondary" id="changeAvatarBtn" style="display:inline-block; width:auto; padding:8px 16px;">
           تغییر عکس پروفایل
-          <input type="file" id="avatarInput" accept="image/*" style="display:none;">
-        </label>
+        </button>
+        <input type="file" id="avatarInput" accept="image/*" style="display:none;">
       </div>
+      <p id="avatarMsg"></p>
     </div>
     <h2 id="username" style="text-align:center; margin:4px 0;"></h2>
     <div class="stat-row"><span>امتیاز کل</span><b id="points"></b></div>
@@ -58,21 +60,43 @@ async function load() {
 }
 load();
 
-document.getElementById('avatarInput').onchange = async (e) => {
+const avatarInput = document.getElementById('avatarInput');
+const avatarMsg = document.getElementById('avatarMsg');
+
+document.getElementById('changeAvatarBtn').addEventListener('click', () => {
+  avatarInput.click();
+});
+
+avatarInput.addEventListener('change', async (e) => {
   const file = e.target.files[0];
   if (!file) return;
-  const fd = new FormData();
-  fd.append('avatar', file);
-  const token = localStorage.getItem('token');
-  const res = await fetch(API_BASE + '/profile/avatar', {
-    method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: fd,
-  });
-  const data = await res.json();
-  if (data.avatar_path) {
-    document.getElementById('avatar').src = API_BASE.replace('/api','') + data.avatar_path + '?t=' + Date.now();
-    loadNavAvatar();
+
+  avatarMsg.style.color = 'var(--text-dim)';
+  avatarMsg.textContent = 'در حال آپلود...';
+
+  try {
+    const fd = new FormData();
+    fd.append('avatar', file);
+    const token = localStorage.getItem('token');
+    const res = await fetch(API_BASE + '/profile/avatar', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: fd,
+    });
+    const data = await res.json().catch(() => ({}));
+
+    if (!res.ok) throw new Error(data.error || 'خطا در آپلود');
+
+    document.getElementById('avatar').src = API_BASE.replace('/api', '') + data.avatar_path + '?t=' + Date.now();
+    if (typeof loadNavAvatar === 'function') loadNavAvatar();
+
+    avatarMsg.style.color = 'var(--accent)';
+    avatarMsg.textContent = '✓ عکس پروفایل با موفقیت آپلود شد';
+  } catch (err) {
+    avatarMsg.style.color = 'var(--danger)';
+    avatarMsg.textContent = 'آپلود ناموفق بود: ' + err.message;
   }
-};
+});
 </script>
 </body>
 </html>
