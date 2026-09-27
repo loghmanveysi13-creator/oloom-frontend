@@ -18,6 +18,7 @@
     <h2 id="chapterTitle"></h2>
     <div id="chapterContent" style="line-height:1.9; font-size:15px;"></div>
     <button class="btn" id="startQuizBtn" style="margin-top:16px;">شروع آزمون پایان فصل (۱۰ سوال)</button>
+    <button class="btn" id="continueBtn" style="margin-top:16px; display:none;">بازگشت به نقشه راه</button>
   </div>
 
   <div class="card" id="quiz-card" style="display:none;">
@@ -30,13 +31,25 @@
 <script src="js/api.js"></script>
 <script>
 const chapterId = new URLSearchParams(location.search).get('id');
+let isIntro = false;
 
 async function loadChapter() {
   const ch = await api.get(`/chapters/${chapterId}`);
-  document.getElementById('chapterTitle').textContent = ch.number === 0 ? 'مقدمه' : `فصل ${ch.number}: ${ch.title}`;
+  isIntro = ch.number === 0;
+  document.getElementById('chapterTitle').textContent = isIntro ? 'مقدمه' : `فصل ${ch.number}: ${ch.title}`;
   document.getElementById('chapterContent').innerHTML = ch.content || '<p>محتوای این فصل به‌زودی اضافه می‌شود.</p>';
+
+  if (isIntro) {
+    document.getElementById('startQuizBtn').style.display = 'none';
+    document.getElementById('continueBtn').style.display = 'inline-flex';
+  }
 }
 loadChapter();
+
+document.getElementById('continueBtn').onclick = async () => {
+  try { await api.post(`/chapters/${chapterId}/complete`, {}); } catch (e) {}
+  location.href = 'home.html';
+};
 
 document.getElementById('startQuizBtn').onclick = async () => {
   document.getElementById('content-card').style.display = 'none';
