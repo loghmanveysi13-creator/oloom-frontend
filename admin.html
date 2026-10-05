@@ -11,6 +11,7 @@
   th { color:var(--text-dim); font-weight:700; }
   tr { cursor:pointer; }
   tr:active { background: rgba(255,255,255,.03); }
+  #debugBox { font-size:11px; color:var(--text-dim); white-space:pre-wrap; word-break:break-all; margin-top:10px; padding:10px; background:#0f1c2d; border-radius:8px; }
 </style>
 </head>
 <body>
@@ -22,6 +23,7 @@
       <thead><tr><th>نام</th><th>موبایل</th><th>امتیاز</th><th>فصل‌های گذرانده</th></tr></thead>
       <tbody id="usersTable"></tbody>
     </table>
+    <div id="debugBox"></div>
   </div>
   <div class="card" id="detailCard" style="display:none; margin-top:16px;">
     <h3 id="detailName"></h3>
@@ -32,16 +34,33 @@
 <script src="js/api.js"></script>
 <script>
 async function load() {
+  const debugBox = document.getElementById('debugBox');
+  const token = localStorage.getItem('token');
   try {
-    const users = await api.get('/admin/users');
+    const res = await fetch(API_BASE + '/admin/users', {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+    const rawText = await res.text();
+    debugBox.textContent = `وضعیت HTTP: ${res.status}\nپاسخ خام سرور:\n${rawText.slice(0, 500)}`;
+
+    let users;
+    try { users = JSON.parse(rawText); } catch { users = null; }
+
+    if (!res.ok || !Array.isArray(users)) {
+      document.getElementById('usersTable').innerHTML =
+        `<tr><td colspan="4" style="text-align:center; color:var(--danger);">دسترسی ناموفق — جزئیات پایین را ببین</td></tr>`;
+      return;
+    }
+
     document.getElementById('usersTable').innerHTML = users.map(u => `
       <tr onclick="showDetail(${u.id}, '${(u.full_name || u.username).replace(/'/g, "\\'")}')">
         <td>${u.full_name || u.username}</td><td>${u.mobile}</td>
         <td>${u.total_points}</td><td>${u.chapters_completed}</td>
       </tr>`).join('') || '<tr><td colspan="4" style="text-align:center; color:var(--text-dim);">هنوز دانش‌آموزی ثبت‌نام نکرده</td></tr>';
   } catch (e) {
+    debugBox.textContent = `خطای شبکه (fetch خودش fail شد): ${e.message}`;
     document.getElementById('usersTable').innerHTML =
-      `<tr><td colspan="4" style="text-align:center; color:var(--danger); font-size:11px;">خطا: ${e.message}<br>توکن: ${localStorage.getItem('token') ? 'موجود' : 'وجود ندارد'}</td></tr>`;
+      `<tr><td colspan="4" style="text-align:center; color:var(--danger);">خطای اتصال</td></tr>`;
   }
 }
 load();
