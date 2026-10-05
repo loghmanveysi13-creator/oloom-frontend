@@ -32,6 +32,12 @@
     <div class="stat-row"><span>فصل‌های گذرانده</span><b id="completedCount"></b></div>
   </div>
 
+  <div class="card" id="adminLinkCard" style="display:none; margin-top:16px; text-align:center;">
+    <a href="admin.html" class="btn secondary" style="display:inline-block; width:auto; padding:10px 24px;">
+      📊 پنل مدیریت
+    </a>
+  </div>
+
   <div class="card" style="margin-top:16px;">
     <h3 style="margin-top:0;">آخرین آزمون‌ها</h3>
     <div id="attemptsList"></div>
@@ -53,6 +59,7 @@ async function load() {
     document.getElementById('points').textContent = user.total_points;
     document.getElementById('completedCount').textContent = attempts.filter(a => a.passed).length;
     if (user.avatar_path) document.getElementById('avatar').src = API_BASE.replace('/api','') + user.avatar_path;
+    if (user.role === 'admin') document.getElementById('adminLinkCard').style.display = 'block';
     document.getElementById('attemptsList').innerHTML = attempts.map(a =>
       `<div class="stat-row"><span>فصل ${a.chapter_id}</span><b style="color:${a.passed ? 'var(--accent)' : 'var(--danger)'}">${a.score}/10</b></div>`
     ).join('') || '<p style="color:var(--text-dim); font-size:13px;">هنوز آزمونی نداده‌ای</p>';
