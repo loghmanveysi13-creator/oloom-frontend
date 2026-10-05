@@ -41,7 +41,7 @@ async function load() {
       </tr>`).join('') || '<tr><td colspan="4" style="text-align:center; color:var(--text-dim);">هنوز دانش‌آموزی ثبت‌نام نکرده</td></tr>';
   } catch (e) {
     document.getElementById('usersTable').innerHTML =
-      `<tr><td colspan="4" style="text-align:center; color:var(--danger);">دسترسی نداری یا خطایی رخ داد: ${e.message}</td></tr>`;
+      `<tr><td colspan="4" style="text-align:center; color:var(--danger); font-size:11px;">خطا: ${e.message}<br>توکن: ${localStorage.getItem('token') ? 'موجود' : 'وجود ندارد'}</td></tr>`;
   }
 }
 load();
