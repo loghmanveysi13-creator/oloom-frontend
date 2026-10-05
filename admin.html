@@ -15,6 +15,7 @@
 </head>
 <body>
 <div class="container" style="max-width:700px;">
+  <a href="home.html" style="display:inline-block; margin-bottom:12px; color:var(--accent-3); font-size:14px;">← بازگشت به اپ</a>
   <h1>پنل مدیریت — لقمان ویسی</h1>
   <div class="card">
     <table>
@@ -31,12 +32,17 @@
 <script src="js/api.js"></script>
 <script>
 async function load() {
-  const users = await api.get('/admin/users');
-  document.getElementById('usersTable').innerHTML = users.map(u => `
-    <tr onclick="showDetail(${u.id}, '${u.full_name || u.username}')">
-      <td>${u.full_name || u.username}</td><td>${u.mobile}</td>
-      <td>${u.total_points}</td><td>${u.chapters_completed}</td>
-    </tr>`).join('');
+  try {
+    const users = await api.get('/admin/users');
+    document.getElementById('usersTable').innerHTML = users.map(u => `
+      <tr onclick="showDetail(${u.id}, '${(u.full_name || u.username).replace(/'/g, "\\'")}')">
+        <td>${u.full_name || u.username}</td><td>${u.mobile}</td>
+        <td>${u.total_points}</td><td>${u.chapters_completed}</td>
+      </tr>`).join('') || '<tr><td colspan="4" style="text-align:center; color:var(--text-dim);">هنوز دانش‌آموزی ثبت‌نام نکرده</td></tr>';
+  } catch (e) {
+    document.getElementById('usersTable').innerHTML =
+      `<tr><td colspan="4" style="text-align:center; color:var(--danger);">دسترسی نداری یا خطایی رخ داد: ${e.message}</td></tr>`;
+  }
 }
 load();
 
@@ -48,7 +54,7 @@ async function showDetail(id, name) {
     '<h4>پیشرفت فصل‌ها</h4>' +
     data.progress.map(p => `<div>${p.number === 0 ? 'مقدمه' : 'فصل ' + p.number} — ${p.status} — بهترین نمره: ${p.best_score ?? '-'}</div>`).join('') +
     '<h4 style="margin-top:14px;">تاریخچه آزمون‌ها</h4>' +
-    data.quizHistory.map(q => `<div>فصل ${q.chapter_id}: ${q.score}/10 (${q.passed ? 'قبول' : 'مردود'}) — ${q.created_at}</div>`).join('');
+    (data.quizHistory.map(q => `<div>فصل ${q.chapter_id}: ${q.score}/10 (${q.passed ? 'قبول' : 'مردود'}) — ${q.created_at}</div>`).join('') || '<p style="color:var(--text-dim); font-size:13px;">هنوز آزمونی نداده</p>');
 }
 </script>
 </body>
