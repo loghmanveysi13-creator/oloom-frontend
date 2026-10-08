@@ -18,8 +18,8 @@
   .node.completed .node-circle { fill: var(--accent); stroke: var(--accent); }
   .node.unlocked .node-circle { fill: var(--accent-3); stroke: var(--accent-3); }
   .node.locked .node-circle { fill: var(--locked); stroke: var(--locked); }
-  .node-label { font-size: 11px; fill: var(--text); font-family: 'Vazirmatn', Tahoma, sans-serif; font-weight: 700; text-anchor: middle; }
-  .node-icon { font-size: 16px; text-anchor: middle; dominant-baseline: middle; }
+  .node-label { font-size: 12px; fill: var(--text); font-family: 'Vazirmatn', Tahoma, sans-serif; font-weight: 700; text-anchor: middle; }
+  .node-icon { font-size: 20px; text-anchor: middle; dominant-baseline: middle; }
   #chapter-sheet {
     position: fixed; inset: auto 0 0 0; background: var(--card);
     border-radius: 24px 24px 0 0; padding: 20px; transform: translateY(110%);
@@ -43,7 +43,7 @@
   </div>
 
   <div id="roadmap-wrap" class="card">
-    <svg id="roadmap-svg" viewBox="0 0 400 900" xmlns="http://www.w3.org/2000/svg">
+    <svg id="roadmap-svg" viewBox="0 0 400 1300" xmlns="http://www.w3.org/2000/svg">
       <path id="spiral-path" d="" fill="none" stroke="#2c3f5a" stroke-width="6" stroke-linecap="round"/>
       <g id="nodes-layer"></g>
     </svg>
@@ -74,19 +74,21 @@
 
 <script src="js/api.js"></script>
 <script>
-const CHAPTER_COUNT = 16;
+// --- تولید مسیر مارپیچ و چیدمان ۱۶ گره (مقدمه + فصل ۱ تا ۱۵)، از بالا به پایین ---
+const CHAPTER_COUNT = 16; // 0..15
 const svg = document.getElementById('roadmap-svg');
 const pathEl = document.getElementById('spiral-path');
 const nodesLayer = document.getElementById('nodes-layer');
 
 function buildSpiralPath() {
-  const cx = 200, cyBase = 850, turns = 3.4, points = [];
-  const steps = 200;
+  // مارپیچ ساده با فرمول قطبی، از بالا (مقدمه) به پایین (فصل ۱۵)
+  const cx = 200, yStart = 70, turns = 3.4, points = [];
+  const steps = 240;
   for (let i = 0; i <= steps; i++) {
     const t = i / steps;
     const angle = t * turns * Math.PI * 2;
-    const radius = 40 + t * 130;
-    const y = cyBase - t * 780;
+    const radius = 40 + t * 140;
+    const y = yStart + t * 1180;
     const x = cx + Math.sin(angle) * radius;
     points.push([x, y]);
   }
@@ -94,6 +96,12 @@ function buildSpiralPath() {
   points.slice(1).forEach(p => d += ` L ${p[0]} ${p[1]}`);
   pathEl.setAttribute('d', d);
   return pathEl;
+}
+
+function iconFor(ch) {
+  if (ch.status === 'completed') return '✅';
+  if (ch.status === 'locked') return '🔒';
+  return ch.number === 0 ? '👋' : '📖';
 }
 
 function placeNodesOnPath(chapters) {
@@ -111,19 +119,18 @@ function placeNodesOnPath(chapters) {
     g.dataset.id = ch.id;
 
     const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-    circle.setAttribute('r', 22);
+    circle.setAttribute('r', 24);
     circle.setAttribute('class', 'node-circle');
     g.appendChild(circle);
 
     const icon = document.createElementNS('http://www.w3.org/2000/svg', 'text');
     icon.setAttribute('class', 'node-icon');
-    icon.setAttribute('fill', '#fff');
-    icon.textContent = ch.status === 'completed' ? '✓' : ch.status === 'locked' ? '🔒' : (ch.number ?? idx);
+    icon.textContent = iconFor(ch);
     g.appendChild(icon);
 
     const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
     label.setAttribute('class', 'node-label');
-    label.setAttribute('y', 38);
+    label.setAttribute('y', 42);
     label.textContent = ch.number === 0 ? 'مقدمه' : `فصل ${ch.number}`;
     g.appendChild(label);
 
@@ -132,11 +139,12 @@ function placeNodesOnPath(chapters) {
   });
 }
 
+// --- برگه‌ی جزئیات فصل ---
 const sheet = document.getElementById('chapter-sheet');
 const backdrop = document.getElementById('sheet-backdrop');
 function openSheet(ch) {
   document.getElementById('sheet-title').textContent = ch.number === 0 ? 'مقدمه' : `فصل ${ch.number}: ${ch.title || ''}`;
-  const statusText = { locked: '🔒 این فصل هنوز قفل است', unlocked: 'آماده مطالعه', completed: `✓ گذرانده شده — نمره: ${ch.best_score ?? '-'} از ۱۰` };
+  const statusText = { locked: '🔒 این فصل هنوز قفل است', unlocked: 'آماده مطالعه', completed: `✅ گذرانده شده — نمره: ${ch.best_score ?? '-'} از ۱۰` };
   document.getElementById('sheet-status').textContent = statusText[ch.status] || '';
   const actionBtn = document.getElementById('sheet-action');
   actionBtn.style.display = ch.status === 'locked' ? 'none' : 'inline-flex';
@@ -147,6 +155,7 @@ document.getElementById('sheet-close').onclick = () =>
   (sheet.classList.remove('open'), backdrop.classList.remove('open'));
 backdrop.onclick = document.getElementById('sheet-close').onclick;
 
+// --- بارگذاری داده از API (با داده‌ی نمونه برای پیش‌نمایش بدون بک‌اند) ---
 async function loadChapters() {
   try {
     const data = await api.get('/chapters');
