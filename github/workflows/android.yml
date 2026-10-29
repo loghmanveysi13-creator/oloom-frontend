@@ -21,7 +21,7 @@ jobs:
           cp *.html manifest.json www/
           cp -r css js icons www/
       - run: npx cap add android
-      - run: npx capacitor-assets generate --android
+      
       - run: npx cap sync android
       - working-directory: android
         run: ./gradlew assembleDebug
